@@ -85,8 +85,8 @@ FlowDockJob.prototype.startJob = function(){
 function startJob(flowdockJob) {
     console.log("Starting JobName ".concat(flowdockJob.jobName));
     flowdockJob.jobStatus = status.JobStart;
-    flowdockJob.jobThreadMonitor.replyOnThread("Job ".concat(this.jobName).concat(" Has been Started"), status.JobRunning);
-    flowdockJob.objectionThreadMonitor.replyOnThread("Job ".concat(this.jobName).concat(" Has been Started"), status.JobRunning);
+    flowdockJob.jobThreadMonitor.replyOnThread("Job ".concat(flowdockJob.jobName).concat(" Has been Started"), status.JobRunning);
+    flowdockJob.objectionThreadMonitor.replyOnThread("Job ".concat(flowdockJob.jobName).concat(" Has been Started"), status.JobRunning);
     
 }
 
