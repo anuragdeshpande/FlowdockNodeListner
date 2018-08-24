@@ -17,28 +17,38 @@ session.flows(function (err, flows) {
     return anotherStream.on('message', function (message) {
         if (message.event === "message") {
             if (message.content.startsWith("@Bot") || message.content.startsWith("@bot")) {
-                message.tags.forEach(function (tag) {
-                    if(!tag.toString().startsWith(":")) {
-                        let flowDockJob = null;
-                        console.log(tag);
-                        switch (tag.toLowerCase()) {
-                            case JobTypes.BuildDeploy:
-                                flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
-                                break;
-                            case JobTypes.JenkinsJob:
-                                console.log("Prepare Jenkins Job");
-                                break;
-                            case 'flowID':
-                                break;
-                            default:
-                                flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
-                                flowDockJob.jobThread.reply("No Idea what you are talking about.")
+                if(message.content.indexOf('#') !== -1) {
+                    message.tags.forEach(function (tag) {
+                        if (!tag.toString().startsWith(":")) {
+                            let flowDockJob = null;
+                            switch (tag.toLowerCase()) {
+                                case JobTypes.BuildDeploy:
+                                    flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
+                                    break;
+                                case JobTypes.JenkinsJob:
+                                    console.log("Prepare Jenkins Job");
+                                    break;
+                                case 'flowID':
+                                    break;
+                                default:
+                                    flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
+                                    flowDockJob.jobThread.reply(constants.NonConversationalMessage);
+                            }
+                            if (flowDockJob.jobStatus !== status.Ended) {
+                                monitorThreads.set(message.thread_id, flowDockJob);
+                            }
                         }
-                        if (flowDockJob.jobStatus !== status.Ended) {
-                            monitorThreads.set(message.thread_id, flowDockJob);
-                        }
+                    });
+                } else {
+                    if(message.content.toUpperCase().indexOf("HI") !== -1 || message.content.toUpperCase().indexOf("HI") !== -1 ||
+                        message.content.toUpperCase().indexOf("GOOD MORNING") !== -1 || message.content.toUpperCase().indexOf("SPEAK") !== -1
+                    || message.content.toUpperCase().indexOf("HOW") !== -1 || message.content.toUpperCase().indexOf("WHAT") !== -1){
+                        session.threadMessage(message.flow, message.thread_id, "Good Day to you too, before you try and talk any further, ".concat(constants.NonConversationalMessage));
+                    } else {
+                        session.threadMessage(message.flow, message.thread_id, constants.NonConversationalMessage);
                     }
-                });
+
+                }
             } else if (monitorThreads.has(message.thread_id)) {
                 let flowDockJob = monitorThreads.get(message.thread_id);
                 switch (flowDockJob.jobStatus) {

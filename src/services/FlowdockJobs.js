@@ -1,6 +1,7 @@
 let ThreadMonitor = require('./ThreadMonitor');
 let constants = require('../models/Constants');
 let status = require('../models/statusCode');
+let open = require('opn');
 
 function FlowDockJob(jobType, message, session) {
     let jobNameStartsAt = message.content.indexOf("\`");
@@ -21,7 +22,7 @@ function FlowDockJob(jobType, message, session) {
     this.objectionTimer = null;
     this.jobTimer = null;
     if (!this.hasValidJobName()) {
-        this.jobThread.reply("No Server Name Found! Request Terminated.");
+        this.jobThread.reply("Request Terminated.");
         this.jobStatus = status.Ended;
     } else {
         this.askConfirmationFromUser();
@@ -47,95 +48,107 @@ FlowDockJob.prototype.askConfirmationFromUser = function () {
 FlowDockJob.prototype.verifyConfirmationInMessage = function (message, monitorThreads) {
     if (this.jobThread.isReplyOnThisThread(message)) {
         if (this.isReplyFromRequester(message)) {
-            if (message.content.toUpperCase() === "YES") {
+            if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "YES") {
                 this.startTimerForJob(constants.JobStartTimeOut);
                 this.jobThread.reply(constants.ConfirmationAckMessage, status.CanOverrideTAG);
                 this.postObjectionsInFlow(monitorThreads, constants.fakeServerUpdates, constants.ObjectionsMessage);
 
                 this.jobStatus = status.WaitingObjections;
-            } else if (message.content.toUpperCase() === "NO") {
+            } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "NO") {
                 this.jobThread.reply("Request Terminated.");
                 this.jobStatus = status.Ended;
+            } else {
+                this.jobThread.reply(constants.YesNoUserMessage);
             }
-            /*else {
-                           this.jobThread.reply(constants.YesNoUserMessage);
-                       }*/
         } else {
-            if(message.user !== '273811'){
-                this.jobThread.reply("Only @".concat(this.requestedBy.nick).concat(" Can Confirm the request."))
-            }
-
+            this.jobThread.reply("Only @".concat(this.requestedBy.nick).concat(" Can Confirm the request."))
         }
     }
 };
 
 FlowDockJob.prototype.checkForObjectionsInMessage = function (message) {
     if (this.objectionThread !== null && this.objectionThread.isReplyOnThisThread(message)) {
-        if (message.content.toUpperCase() === "STOP" || message.content.toUpperCase() === "NO") {
+        if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "STOP" || message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "NO") {
             clearTimeout(this.objectionTimer);
             this.objectionThread.reply("Cancelling build/deploy request, notifying requester.");
             this.jobThread.reply("Objection Received in Server Updates group. Cancelling Build/Deploy Request.");
             this.jobStatus = status.Ended;
         } else if (message.content.toUpperCase() === "YES") {
             // do nothing
+        } else {
+            this.jobThread.reply(constants.NonConversationalMessage);
         }
-        /*else {
-                   this.jobThread.reply(constants.YesNoUserMessage);
-               } */
     } else if (this.jobThread.isReplyOnThisThread(message)) {
-        if (message.content.toUpperCase() === "OVERRIDE") {
+        if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "OVERRIDE") {
             if (this.isReplyFromRequester(message)) {
                 this.objectionThread.reply("@".concat(this.requestedBy.nick).concat(" -Requester has issued an override - Starting Job `").concat(this.jobName).concat("`"));
                 clearTimeout(this.objectionTimer);
                 this.jobThread.reply("Override Confirmed, Starting Job `".concat(this.job).concat("`, will notify the build status. You can Check the Status anytime with in this thread by replying \"status\""));
                 this.startJob();
             } else {
-                if(message.user !== '273811'){
-                    this.jobThread.reply("[Invalid User] Override can be requested @".concat(flowDockJob.requestedBy.nick).concat(" only."));
-                }
-
+                this.jobThread.reply("[Invalid User] Override can be requested @".concat(this.requestedBy.nick).concat(" only."));
             }
+        }  else {
+            this.jobThread.reply(constants.NonConversationalMessage);
         }
     }
 };
 
 FlowDockJob.prototype.checkForInterrupts = function (message) {
     if (this.jobThread.isReplyOnThisThread(message)) {
-        if (message.content.toUpperCase() === "STOP" || message.content.toUpperCase() === "END") {
-            let status = this.terminateJob();
-            this.jobThread.reply("Job Termination ".concat(this.terminateJob() ? "Successful" : "Failed, Please terminate the job Manually. Redirecting you to jenkins....."));
-        } else if (message.content.toUpperCase() === "STATUS") {
+        if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "STOP" || message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "END") {
+            this.terminateJob(false);
+        } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "STATUS") {
             let status = this.checkStatus(message, true);
-        } /*else {
-            this.jobThread.reply("Job ".concat(this.jobName).concat(" is currently running. Please reply \n 1. `Status` to check the latest status of the job \n 2. `Stop` or `End` to terminate the job."))
-        }*/
+        } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "REDIRECT") {
+            this.terminateJob(true);
+        } else {
+            this.jobThread.reply(constants.NonConversationalMessage);
+        }
     }
+};
+
+FlowDockJob.prototype.redirectToJenkins = function () {
+    open("https://jenkins.idfbins.com");
 };
 
 
 FlowDockJob.prototype.checkStatus = function (message, shouldPrintStatus) {
     //todo complete checkStatus
     if (shouldPrintStatus) {
-        if(message !== null){
-            if(this.objectionThread != null && this.objectionThread.isReplyOnThisThread(message)){
-                this.objectionThread.reply("Job is running")
+        if (message !== null) {
+            if (this.objectionThread != null && this.objectionThread.isReplyOnThisThread(message)) {
+                this.objectionThread.reply("Job ".concat(this.jobStatus))
             }
 
-            if(this.jobThread.isReplyOnThisThread(message)){
-                this.jobThread.reply("Job is running");
+            if (this.jobThread.isReplyOnThisThread(message)) {
+                this.jobThread.reply("Job ".concat(this.jobStatus));
             }
-        }else {
-            this.objectionThread.reply(status.JobSuccess);
-            this.jobThread.reply(status.JobSuccess);
+        } else {
+            this.objectionThread.reply(this.jobStatus);
+            this.jobThread.reply(this.jobStatus);
         }
     } else {
         // do nothing.
     }
-    return status.JobRunning;
+    return this.jobStatus;
 };
 
-FlowDockJob.prototype.terminateJob = function () {
+FlowDockJob.prototype.terminateJob = function (redirect) {
     // todo comeplete terminate job
+    let status = true;
+    this.jobThread.reply("Job Termination ".concat(status ? "Successful" : "Failed, Please terminate the job Manually. Redirecting you to jenkins....."));
+    this.objectionThread.reply("Job Ended.");
+    if (!status) {
+        this.objectionThread.reply("Job Ended with Failure. Concerned team has been notified.");
+        redirect = true;
+    }
+
+    if (redirect) {
+        this.jobThread.reply("Redirecting to jenkins");
+        this.redirectToJenkins();
+    }
+    this.jobStatus = status.Ended;
     return true;
 };
 
@@ -207,11 +220,10 @@ FlowDockJob.prototype.startJob = function () {
 };
 
 FlowDockJob.prototype.isReplyFromRequester = function (message) {
-    return this.requestedBy.id.toString() === message.user;
+    return this.requestedBy.id.toString() === message.user && message.user !== '349549';
 };
 
 function startJob(flowdockJob) {
-    console.log("Starting JobName ".concat(flowdockJob.jobName));
     flowdockJob.jobStatus = status.JobRunning;
     flowdockJob.jobTimer = setInterval(function () {
         let jobStatus = flowdockJob.checkStatus(false);

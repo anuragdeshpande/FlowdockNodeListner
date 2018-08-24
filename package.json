@@ -13,6 +13,7 @@
     "flowdock": "latest",
     "jenkins": "latest",
     "hashmap": "latest",
-    "lokijs": "latest"
+    "lokijs": "latest",
+    "opn": "latest"
   }
 }
