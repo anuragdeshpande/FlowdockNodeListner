@@ -9,11 +9,11 @@ function ThreadMonitor(session, message) {
     return this
 }
 
-ThreadMonitor.prototype.replyOnThread = function (description, tags, callback) {
+ThreadMonitor.prototype.reply = function (description, tags, callback) {
     if (!(tags instanceof Array)) {
         tags = [tags]
     }
-    if (tags.indexOf(status.RequiresConfirmationTAG) !== -1) {
+    if (tags.indexOf(status.WaitingForConfirmation) !== -1) {
         this.hasPendingConfirmation = true;
         this.jobStatus = status.Confirm;
     }
@@ -24,12 +24,8 @@ ThreadMonitor.prototype.replyOnThread = function (description, tags, callback) {
     return this
 };
 
-ThreadMonitor.prototype.messageInFlow = function (flowID, description, tags) {
-    if (!(tags instanceof Array)) {
-        tags = [tags]
-    }
-    this.session.message(flowID, description, tags);
-    return this
+ThreadMonitor.prototype.isReplyOnThisThread = function(message){
+    return message.thread_id === this.threadID;
 };
 
 
