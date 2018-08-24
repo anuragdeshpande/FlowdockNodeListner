@@ -20,13 +20,14 @@ ThreadMonitor.prototype.reply = function (description, tags, callback) {
     if (tags.indexOf(status.CanOverrideTAG) !== -1) {
         this.hasPendingOverride = true;
     }
-    this.session.threadMessage(this.flowID, this.threadID, description, tags, callback)
+    this.session.threadMessage(this.flowID, this.threadID, description, tags, callback);
     return this
 };
 
 ThreadMonitor.prototype.isReplyOnThisThread = function(message){
-    return message.thread_id === this.threadID;
+    return message.thread_id === this.threadID && message.user !== '349549';
 };
+
 
 
 module.exports = ThreadMonitor;

@@ -1,14 +1,9 @@
+let Session = require('flowdock').Session;
 let JobTypes = require('./src/models/JobTypes');
 let FlowDockJob = require('./src/services/FlowdockJobs');
-let Session = require('flowdock').Session;
 let status = require('./src/models/statusCode');
 let constants = require('./src/models/Constants');
-let session = new Session("f311ccca8b85108dd100309b13ff6a4a");
-
-let jenkinsFlowID = '9fd4de5f-d8e0-4907-82cd-3681252bd01e';
-let serverUpdatesID = 'e72ec7b0-14c2-407e-b3b2-84a0830170ad';
-let acesFlowID = '988e1f69-1883-44ee-8ffe-02aa4b16739d';
-let fakeServerUpdates = 'f9e025fb-d3c5-4704-ac25-cb8226534de3';
+let session = new Session("1ec2e89731ea0718a85bb5fd45bf4483");
 
 let monitorThreads = new Map();
 
@@ -21,26 +16,29 @@ session.flows(function (err, flows) {
     anotherStream = session.stream(flowIds);
     return anotherStream.on('message', function (message) {
         if (message.event === "message") {
-            if (message.content.startsWith("@bot")) {
+            if (message.content.startsWith("@Bot") || message.content.startsWith("@bot")) {
                 message.tags.forEach(function (tag) {
-                    let flowDockJob = null;
-                    switch (tag.toLowerCase()) {
-                        case JobTypes.BuildDeploy:
-                            flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
-                            break;
-                        case JobTypes.JenkinsJob:
-                            console.log("Prepare Jenkins Job");
-                            break;
-                        case 'flowID':
-                            break;
-                        default:
-                            let defaultJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
-                            defaultJob.jobThread.reply("No Idea what you are talking about.")
+                    if(!tag.toString().startsWith(":")) {
+                        let flowDockJob = null;
+                        console.log(tag);
+                        switch (tag.toLowerCase()) {
+                            case JobTypes.BuildDeploy:
+                                flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
+                                break;
+                            case JobTypes.JenkinsJob:
+                                console.log("Prepare Jenkins Job");
+                                break;
+                            case 'flowID':
+                                break;
+                            default:
+                                flowDockJob = new FlowDockJob(JobTypes.BuildDeploy, message, session);
+                                flowDockJob.jobThread.reply("No Idea what you are talking about.")
+                        }
+                        if (flowDockJob.jobStatus !== status.Ended) {
+                            monitorThreads.set(message.thread_id, flowDockJob);
+                        }
                     }
-                    if (flowDockJob.jobStatus !== status.Ended) {
-                        monitorThreads.set(message.thread_id, flowDockJob);
-                    }
-                })
+                });
             } else if (monitorThreads.has(message.thread_id)) {
                 let flowDockJob = monitorThreads.get(message.thread_id);
                 switch (flowDockJob.jobStatus) {
@@ -51,12 +49,9 @@ session.flows(function (err, flows) {
                         }
                         break;
                     case status.WaitingForConfirmation:
-                        flowDockJob.verifyConfirmationInMessage(message);
+                        flowDockJob.verifyConfirmationInMessage(message, monitorThreads);
                         break;
                     case status.WaitingObjections:
-                        if(flowDockJob.jobStatus === status.PostInServerUpdates){
-                            flowDockJob.postObjectionsInFlow(monitorThreads, fakeServerUpdates, constants.ObjectionsMessage);
-                        }
                         flowDockJob.checkForObjectionsInMessage(message);
                         break;
                     case status.JobRunning:

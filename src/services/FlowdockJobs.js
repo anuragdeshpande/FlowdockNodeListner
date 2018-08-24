@@ -44,13 +44,15 @@ FlowDockJob.prototype.askConfirmationFromUser = function () {
     }
 };
 
-FlowDockJob.prototype.verifyConfirmationInMessage = function (message) {
+FlowDockJob.prototype.verifyConfirmationInMessage = function (message, monitorThreads) {
     if (this.jobThread.isReplyOnThisThread(message)) {
         if (this.isReplyFromRequester(message)) {
             if (message.content.toUpperCase() === "YES") {
                 this.startTimerForJob(constants.JobStartTimeOut);
                 this.jobThread.reply(constants.ConfirmationAckMessage, status.CanOverrideTAG);
-                this.jobStatus = status.PostInServerUpdates;
+                this.postObjectionsInFlow(monitorThreads, constants.fakeServerUpdates, constants.ObjectionsMessage);
+
+                this.jobStatus = status.WaitingObjections;
             } else if (message.content.toUpperCase() === "NO") {
                 this.jobThread.reply("Request Terminated.");
                 this.jobStatus = status.Ended;
@@ -68,13 +70,13 @@ FlowDockJob.prototype.verifyConfirmationInMessage = function (message) {
 };
 
 FlowDockJob.prototype.checkForObjectionsInMessage = function (message) {
-    console.log(this.objectionThread);
     if (this.objectionThread !== null && this.objectionThread.isReplyOnThisThread(message)) {
-        if (message.content.toUpperCase() === "YES") {
+        if (message.content.toUpperCase() === "STOP" || message.content.toUpperCase() === "NO") {
+            clearTimeout(this.objectionTimer);
             this.objectionThread.reply("Cancelling build/deploy request, notifying requester.");
             this.jobThread.reply("Objection Received in Server Updates group. Cancelling Build/Deploy Request.");
             this.jobStatus = status.Ended;
-        } else if (message.content.toUpperCase() === "NO") {
+        } else if (message.content.toUpperCase() === "YES") {
             // do nothing
         }
         /*else {

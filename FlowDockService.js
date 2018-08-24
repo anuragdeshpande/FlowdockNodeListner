@@ -5,7 +5,7 @@ let password = process.env.JenkinsPassword;
 let jenkinsAPI = require('jenkins');
 
 // Session ID for the UserName ( Flow dock api token )
-let session = new Session("f311ccca8b85108dd100309b13ff6a4a");
+let session = new Session("1ec2e89731ea0718a85bb5fd45bf4483");
 
 function FlowDockService(apiKey) {
     this.session = new Session(apiKey);
