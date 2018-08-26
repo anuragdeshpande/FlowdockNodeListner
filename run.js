@@ -28,6 +28,11 @@ session.flows(function (err, flows) {
                                 case JobTypes.JenkinsJob:
                                     console.log("Prepare Jenkins Job");
                                     break;
+                                case JobTypes.Logs:
+                                    flowDockJob = new FlowDockJob(JobTypes.Logs, message, session);
+                                    break;
+                                case JobTypes.Docs:
+                                    flowDockJob = new FlowDockJob(JobTypes.Docs, message, session);
                                 case 'flowID':
                                     break;
                                 default:
@@ -43,7 +48,12 @@ session.flows(function (err, flows) {
                     if(message.content.toUpperCase().indexOf("HI") !== -1 || message.content.toUpperCase().indexOf("HI") !== -1 ||
                         message.content.toUpperCase().indexOf("GOOD MORNING") !== -1 || message.content.toUpperCase().indexOf("SPEAK") !== -1
                     || message.content.toUpperCase().indexOf("HOW") !== -1 || message.content.toUpperCase().indexOf("WHAT") !== -1){
-                        session.threadMessage(message.flow, message.thread_id, "Good Day to you too, before you try and talk any further, ".concat(constants.NonConversationalMessage));
+                        if(message.content.toUpperCase().indexOf("WHAT CAN YOU DO" !== -1)){
+                            session.threadMessage(message.flow, message.thread_id, constants.WhatCanYouDo);
+                        } else{
+                            session.threadMessage(message.flow, message.thread_id, "Good Day to you too, before you try and talk any further, ".concat(constants.NonConversationalMessage));
+                        }
+
                     } else {
                         session.threadMessage(message.flow, message.thread_id, constants.NonConversationalMessage);
                     }
@@ -51,30 +61,17 @@ session.flows(function (err, flows) {
                 }
             } else if (monitorThreads.has(message.thread_id)) {
                 let flowDockJob = monitorThreads.get(message.thread_id);
-                switch (flowDockJob.jobStatus) {
-                    case status.Ended:
-                        if(message.content !== "This Thread is no longer monitored."){
-                            flowDockJob.jobThread.reply("This Thread is no longer monitored.");
-                            monitorThreads.delete(message.thread_id);
-                        }
+                switch (flowDockJob.jobType) {
+                    case JobTypes.BuildDeploy:
+                        flowDockJob.handleBuildDeployJob(message, monitorThreads);
                         break;
-                    case status.WaitingForConfirmation:
-                        flowDockJob.verifyConfirmationInMessage(message, monitorThreads);
+                    case JobTypes.Logs:
+                        flowDockJob.handleLogsJob(message, monitorThreads);
                         break;
-                    case status.WaitingObjections:
-                        flowDockJob.checkForObjectionsInMessage(message);
-                        break;
-                    case status.JobRunning:
-                        flowDockJob.checkForInterrupts(message);
-                        break;
-                    case status.JobSuccess:
-                        flowDockJob.jobStatus = status.Ended;
-                        break;
-                    case status.JobFailed:
-                        flowDockJob.jobStatus = status.Ended;
+                    case JobTypes.Docs:
+                        flowDockJob.handleDocsJob(message, monitorThreads);
                         break;
                 }
-
 
                 // if (message.content.toUpperCase() === "YES") {
                 //     if (flowDockJob.objectionThread !== null && flowDockJob.objectionThread.isReplyOnThisThread(message)) {

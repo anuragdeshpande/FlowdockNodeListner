@@ -14,6 +14,7 @@
     "jenkins": "latest",
     "hashmap": "latest",
     "lokijs": "latest",
-    "opn": "latest"
+    "opn": "latest",
+    "read-last-line": "latest"
   }
 }
