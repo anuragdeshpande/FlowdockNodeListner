@@ -10,3 +10,5 @@ exports.JobRunning = "Running";
 exports.JobSuccess = "Success";
 exports.JobFailed = "Failed";
 exports.Ended = "Ended";
+exports.Unknown = "Unknown";
+exports.Aborted = "Aborted";

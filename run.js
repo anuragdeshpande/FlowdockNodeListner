@@ -1,6 +1,7 @@
 let Session = require('flowdock').Session;
 let JobTypes = require('./src/models/JobTypes');
 let FlowDockJob = require('./src/services/FlowdockJobs');
+let JenkinsService = require('./src/services/JenkinsService');
 let status = require('./src/models/statusCode');
 let constants = require('./src/models/Constants');
 let session = new Session("1ec2e89731ea0718a85bb5fd45bf4483");
@@ -16,6 +17,15 @@ session.flows(function (err, flows) {
     anotherStream = session.stream(flowIds);
     return anotherStream.on('message', function (message) {
         if (message.event === "message") {
+            let jenkins = new JenkinsService();
+            // jenkins.jenkins.job.get(constants.CC_CIUrl, function (err, data) {
+            //     console.log(data.lastBuild);
+            //     console.log(data.lastCompletedBuild);
+            //     console.log(data.lastFailedBuild);
+            //     console.log(data.lastStableBuild);
+            //     console.log(data.lastSuccessfulBuild);
+                // console.log(data.color)
+            // });
             if (message.content.startsWith("@Bot") || message.content.startsWith("@bot")) {
                 if(message.content.indexOf('#') !== -1) {
                     message.tags.forEach(function (tag) {
@@ -27,12 +37,14 @@ session.flows(function (err, flows) {
                                     break;
                                 case JobTypes.JenkinsJob:
                                     console.log("Prepare Jenkins Job");
+
                                     break;
                                 case JobTypes.Logs:
                                     flowDockJob = new FlowDockJob(JobTypes.Logs, message, session);
                                     break;
                                 case JobTypes.Docs:
                                     flowDockJob = new FlowDockJob(JobTypes.Docs, message, session);
+                                    break;
                                 case 'flowID':
                                     break;
                                 default:
@@ -51,7 +63,7 @@ session.flows(function (err, flows) {
                         if(message.content.toUpperCase().indexOf("WHAT CAN YOU DO" !== -1)){
                             session.threadMessage(message.flow, message.thread_id, constants.WhatCanYouDo);
                         } else{
-                            session.threadMessage(message.flow, message.thread_id, "Good Day to you too, before you try and talk any further, ".concat(constants.NonConversationalMessage));
+                            session.threadMessage(message.flow, message.thread_id, "Good Day to you too, before you try and talk any further, ".concat(constants.NonConversationalMessage))
                         }
 
                     } else {
@@ -72,65 +84,6 @@ session.flows(function (err, flows) {
                         flowDockJob.handleDocsJob(message, monitorThreads);
                         break;
                 }
-
-                // if (message.content.toUpperCase() === "YES") {
-                //     if (flowDockJob.objectionThread !== null && flowDockJob.objectionThread.isReplyOnThisThread(message)) {
-                //         // do nothing
-                //     } else if (flowDockJob.jobThread.isReplyOnThisThread(message)) {
-                //         if (flowDockJob.isReplyFromRequester(message)) {
-                //             if (flowDockJob.jobThread.hasPendingConfirmation) {
-                //                 let objectionsThreadID = flowDockJob.postObjectionsInFlow(monitorThreads, fakeServerUpdates, "[Testing - Ignore] Need to start build/deploy on [Server], Reply No/Stop to stop the process. If no objections received in 15 min, build/deploy will start automatically");
-                //                 monitorThreads.set(objectionsThreadID, flowDockJob);
-                //                 flowDockJob.startTimerForJob(timer.JobStartTimeOut);
-                //                 flowDockJob.jobThread.reply("Build Deploy Confirmed, Posted in Server Updates, if no objections will start the build/deploy in 15 min. \n to immediately start the process reply \"override\"", status.CanOverrideTAG);
-                //             } else {
-                //                 flowDockJob.jobThread.reply("Thread is not waiting on confirmation. Current Status: ".concat(flowDockJob.jobThread.jobStatus));
-                //             }
-                //         } else {
-                //             flowDockJob.jobThread.reply("Only @".concat(flowDockJob.requestedBy.nick).concat(" Can Confirm the request."))
-                //         }
-                //     } else {
-                //         session.threadMessage(message.flow, message.thread_id, "[Invalid User] Only Requester can confirm")
-                //     }
-                // } else if (message.content.toUpperCase() === "NO") {
-                //     if (flowDockJob.objectionThread.isReplyOnThisThread(message)) {
-                //         if (flowDockJob.jobThread.jobStatus === status.CanOverrideTAG) {
-                //             flowDockJob.objectionThread.reply("Cancelling build/deploy request, notifying requester.");
-                //             flowDockJob.jobThread.reply("Objection Received in Server Updates group. Cancelling Build/Deploy Request.");
-                //         } else if (flowDockJob.jobThread.jobStatus === status.JobRunning) {
-                //             flowDockJob.objectionThread.reply("Job has been started.")
-                //         }
-                //     } else if (flowDockJob.jobThread.isReplyOnThisThread(message)) {
-                //         if (flowDockJob.isReplyFromRequester(message)) {
-                //             if (flowDockJob.jobThread.hasPendingConfirmation) {
-                //                 let objectionsThreadID = flowDockJob.postObjectionsInFlow(fakeServerUpdates, "[Testing - Ignore] Need to start build/deploy on [Server], Reply No/Stop to stop the process. If no objections received in 15 min, build/deploy will start automatically");
-                //                 monitorThreads.set(objectionsThreadID, flowDockJob);
-                //             } else {
-                //                 flowDockJob.jobThread.reply("Thread is not waiting on confirmation.")
-                //             }
-                //         }
-                //     } else {
-                //         session.threadMessage(message.flow, message.thread_id, "[Invalid User] Only Requester can confirm")
-                //     }
-                // } else if (message.content.toUpperCase() === "OVERRIDE") {
-                //     if (flowDockJob.jobThread.isReplyOnThisThread(message)) {
-                //         if (flowDockJob.isReplyFromRequester(message)) {
-                //             if (flowDockJob.jobThread.jobStatus === status.CanOverrideTAG) {
-                //                 flowDockJob.objectionThread.reply("Requester Override - Starting Job");
-                //                 clearTimeout(flowDockJob.objectionTimer);
-                //                 flowDockJob.jobThread.reply("Override Confirmed, Starting Job, will notify the build status. You can Check the Status anytime with in this thread by replying \"status\"");
-                //                 flowDockJob.startJob();
-                //             } else {
-                //                 flowDockJob.jobThread.reply("Job has already started.");
-                //             }
-                //
-                //         } else {
-                //             flowDockJob.jobThread.reply("[Invalid User] Override can be requested @".concat(flowDockJob.requestedBy.nick).concat(" only."))
-                //         }
-                //     } else {
-                //         // do nothing
-                //     }
-                // }
             }
         }
     });

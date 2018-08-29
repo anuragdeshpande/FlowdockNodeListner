@@ -1,6 +1,6 @@
 exports.JobStartTimeOut = 10000;
 exports.StatusCheckTimeout = 10000;
-exports.ConfirmationRequestMessage = "Are you sure you want to start a Build and Deploy on the server \n Confirm by `Yes` or `No`";
+exports.ConfirmationRequestMessage = "Are you sure \n Confirm by `Yes` or `No`";
 exports.ConfirmationAckMessage = "Build Deploy Confirmed, Posted in Server Updates, if no objections will start the build/deploy in 15 min. \n to immediately start the process reply `override`";
 exports.YesNoUserMessage = "Please reply in `Yes` or `No`";
 exports.ObjectionsMessage = "Need to start build/deploy on [Server], Reply `No` or `Stop` to stop the process. If no objections received in ***15 min***, build/deploy will start automatically";
@@ -25,6 +25,8 @@ exports.WhatCanYouDo = "Howdy, I Can \n 1. `builddeploy` servers - use @Bot #bui
 exports.CC8DEV = "cc8dev";
 exports.CC8UAT = "cc8uat";
 exports.CC8BUAT = "cc8buat";
+exports.CC_CI = "ccci";
+exports.CC_RB = 'ccrb';
 exports.CC = "cc";
 exports.PC = "pc";
 exports.BC = "bc";
@@ -48,3 +50,20 @@ exports.CCDocs = "http://fbmsgw-bld81.idfbins.com/docs/CC805/wwhelp/wwhimpl/js/h
 exports.PCDocs = "http://fbmsgw-bld81.idfbins.com/docs/PC806/wwhelp/wwhimpl/js/html/wwhelp.htm#href=Welcome%20to%20PolicyCenter/cover.html";
 exports.BCDocs = "http://fbmsgw-bld81.idfbins.com/docs/BC805/wwhelp/wwhimpl/js/html/wwhelp.htm#href=Welcome%20to%20BillingCenter/cover.html";
 exports.PortalDocs = "http://fbmsgw-bld81.idfbins.com/docs/CP500/wwhelp/wwhimpl/js/html/wwhelp.htm#href=Welcome%20to%20Claim%20Portal/cover.html";
+
+
+// Jenkins URLs
+// exports.CC_CIUrl = 'ClaimCenter 8 Build CI Branch';
+// exports.CC_RBUrl = 'ClaimCenter 8 Build Hotfix Branch';
+// exports.TestJobUrl = "Anurag Test Job";
+exports.CC_CIUrl = "Anurag Test Job";
+exports.CC_RBUrl = "Anurag Test Job";
+exports.TestJobUrl = "Anurag Test Job";
+
+//
+// Jenkins Colors
+exports.BlueAnime = 'blue_anime';
+exports.RED = 'red';
+exports.BLUE = 'blue';
+exports.ABORTED = 'aborted';
+exports.ABORTED_ANIME = 'aborted_anime';

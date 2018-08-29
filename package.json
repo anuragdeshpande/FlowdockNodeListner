@@ -12,6 +12,7 @@
     "morgan": "~1.9.0",
     "flowdock": "latest",
     "jenkins": "latest",
+    "node-jenkins": "latest",
     "hashmap": "latest",
     "lokijs": "latest",
     "opn": "latest",
