@@ -16,6 +16,9 @@
     "hashmap": "2.4.0",
     "lokijs": "latest",
     "opn": "latest",
-    "read-last-line": "latest"
+    "read-last-line": "latest",
+    "tedious": "^6.6.0",
+    "tedious-connection-pool": "^1.0.5",
+    "dateformat": "^3.0.3"
   }
 }
