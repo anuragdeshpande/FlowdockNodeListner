@@ -37,7 +37,10 @@ session.flows(function (err, flows) {
                                     break;
                                 case JobTypes.JenkinsJob:
                                     console.log("Prepare Jenkins Job");
-
+                                    break;
+                                case JobTypes.RegressionStatus:
+                                    flowDockJob = new FlowDockJob(JobTypes.RegressionStatus, message, session);
+                                    console.log(message);
                                     break;
                                 case JobTypes.Logs:
                                     flowDockJob = new FlowDockJob(JobTypes.Logs, message, session);

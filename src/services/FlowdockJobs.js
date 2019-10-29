@@ -6,6 +6,10 @@ let JobTypes = require('../models/JobTypes');
 let lastLines = require('read-last-line');
 let fs = require('fs');
 let Jenkins = require('./JenkinsService');
+let db = require("./dbController");
+let dbTypes = require('tedious').TYPES;
+let df = require('dateformat');
+
 
 function FlowDockJob(jobType, message, session) {
     let jobNameStartsAt = message.content.indexOf("\`");
@@ -35,7 +39,7 @@ function FlowDockJob(jobType, message, session) {
 }
 
 // private functions
-function initiateJob(flowdockJob) {
+async function initiateJob(flowdockJob) {
     if (flowdockJob.hasServerName()) {
         flowdockJob.serverName = flowdockJob.jobName;
         flowdockJob.serverLogsPath = getLogsPath(flowdockJob);
@@ -48,9 +52,35 @@ function initiateJob(flowdockJob) {
                 flowdockJob.jobThread.reply(constants.ReadingLogs);
                 break;
             case JobTypes.Docs:
-                flowdockJob.jobStatus  = status.Ready;
+                flowdockJob.jobStatus = status.Ready;
                 flowdockJob.jobThread.reply(constants.Checking);
                 break;
+            case JobTypes.RegressionStatus:
+                flowdockJob.jobStatus = status.Ready;
+                let regressionSQL = "SELECT TOP 7 * from SuiteResults WHERE ApplicationName = @appName ORDER BY BuildNumber DESC";
+                let params = [];
+
+
+                db.buildParams(params, 'appName', dbTypes.VarChar, flowdockJob.jobName);
+                db.query(params, regressionSQL, result => {
+                    let results = "";
+                    result.forEach(row => {
+                        if(row.SuiteName.includes("AutomatedTests")){
+                            results += "***"
+                        }
+                        results = results + df(row.Suite_Date, "mm-dd h:MM:ss TT") + "\t ```Pass: " + row.PassPercentage + "% Fail: " + row.FailPercentage + "% Skipped: " + row.SkippedCount + " Tests ``` \t[Report](" + row.ReportPath + ")" + "\t (Build: " + row.BuildNumber + " - " + row.SuiteName + ")";
+                        if(row.SuiteName.includes("AutomatedTests")){
+                            results += "*** \n"
+                        } else {
+                            results += "\n"
+                        }
+                    });
+
+                    flowdockJob.jobThread.reply(results);
+                });
+
+                break;
+
             default:
                 flowdockJob.jobThread.reply(constants.InvalidNameTerminate);
                 break;
@@ -164,7 +194,7 @@ FlowDockJob.prototype.checkStatus = function (message, shouldPrintStatus) {
             this.jenkinsService.getBuildStatus(null, this);
         }
     } else {
-       this.jenkinsService.getBuildStatus(null, this, true);
+        this.jenkinsService.getBuildStatus(null, this, true);
     }
     return this.jobStatus;
 };
@@ -174,7 +204,7 @@ FlowDockJob.prototype.terminateJob = function (redirect) {
     let that = this;
     this.jobStatus = status.Ended;
     this.jenkinsService.jenkins.build.stop([this.jobName, this.buildID], function (err) {
-        if( err === null ){
+        if (err === null) {
             that.jobThread.reply("Job Terminated.");
             that.objectionThread.reply("Job Terminated.");
         }
@@ -242,7 +272,7 @@ FlowDockJob.prototype.isReplyFromRequester = function (message) {
     return this.requestedBy.id.toString() === message.user && message.user !== '349549';
 };
 
-FlowDockJob.prototype.getJenkinsJobName = function(){
+FlowDockJob.prototype.getJenkinsJobName = function () {
     switch (this.jobName) {
         case constants.CC_CI:
         case constants.CC8DEV:
@@ -255,9 +285,9 @@ FlowDockJob.prototype.getJenkinsJobName = function(){
     }
 };
 
-FlowDockJob.prototype.hasRedirectCommand = function(message){
+FlowDockJob.prototype.hasRedirectCommand = function (message) {
     let shouldRedirect = message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "REDIRECT";
-    if(shouldRedirect){
+    if (shouldRedirect) {
         this.jobThread.reply("Redirecting to jenkins");
     } else {
         return shouldRedirect;
@@ -292,7 +322,7 @@ FlowDockJob.prototype.handleBuildDeployJob = function (message, monitorThreads) 
             let objections = this.checkForObjectionsInMessage(message);
 
             // true = objection posted in the objection thread
-            if(objections === true){
+            if (objections === true) {
                 this.jobStatus = status.Ended;
                 clearTimeout(this.objectionTimer);
                 this.objectionThread.reply("Cancelling build/deploy request, notifying requester.");
@@ -300,7 +330,7 @@ FlowDockJob.prototype.handleBuildDeployJob = function (message, monitorThreads) 
 
             }
             // false = requester has issued override
-            if(objections === false){
+            if (objections === false) {
                 this.objectionThread.reply("@".concat(this.requestedBy.nick).concat(" - Requester has issued an override - Starting Job `").concat(this.jobName).concat("`"));
                 clearTimeout(this.objectionTimer);
                 this.jobThread.reply("Override Confirmed, Starting Job `".concat(this.jobName).concat("`, will notify the build status"));
@@ -312,14 +342,14 @@ FlowDockJob.prototype.handleBuildDeployJob = function (message, monitorThreads) 
             break;
         case status.JobSuccess:
             this.jobStatus = status.Ended;
-            if(this.hasRedirectCommand(message)){
+            if (this.hasRedirectCommand(message)) {
                 this.redirectToJenkins();
             }
 
             break;
         case status.JobFailed:
             this.jobStatus = status.Ended;
-            if(this.hasRedirectCommand(message)){
+            if (this.hasRedirectCommand(message)) {
                 this.redirectToJenkins();
             }
 
@@ -346,10 +376,10 @@ FlowDockJob.prototype.handleLogsJob = function (message, monitorThreads) {
             });
             break;
         case status.JobSuccess:
-            if(this.isReplyFromRequester(message)){
-                if(message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "REDIRECT"){
+            if (this.isReplyFromRequester(message)) {
+                if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "REDIRECT") {
                     open(this.serverLogsPath);
-                } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "END"){
+                } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "END") {
                     this.jobStatus = status.Ended;
                     this.jobThread.reply("Transaction Ended.");
                 }
@@ -364,58 +394,58 @@ FlowDockJob.prototype.handleLogsJob = function (message, monitorThreads) {
 
 FlowDockJob.prototype.handleDocsJob = function (message, monitorThreads) {
     switch (this.jobStatus) {
-    case status.Ended:
-        if (message.content !== "This Thread is no longer monitored.") {
-            this.jobThread.reply("This Thread is no longer monitored.");
-            monitorThreads.delete(message.thread_id);
-        }
-        break;
-    case status.Ready:
-        switch (this.jobName) {
-            case constants.CC:
-                this.jobStatus = status.Ended;
-                open(constants.CCDocs);
-                break;
-            case constants.PC:
-                this.jobStatus = status.Ended;
-                open(constants.PCDocs);
-                break;
-            case constants.BC:
-                this.jobStatus = status.Ended;
-                open(constants.BCDocs);
-                break;
-            case constants.Portals:
-                this.jobStatus = status.Ended;
-                open(constants.PortalDocs);
-                break;
-            default:
-                this.jobStatus = status.Ended;
-                this.jobThread.reply("Could Not Find Documentation for :".concat(this.jobName));
-                break;
-
-        }
-        break;
-    case status.JobSuccess:
-        if(this.isReplyFromRequester(message)){
-            if(message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "REDIRECT"){
-                open(this.serverLogsPath);
-            } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "END"){
-                this.jobStatus = status.Ended;
-                this.jobThread.reply("Transaction Ended.");
+        case status.Ended:
+            if (message.content !== "This Thread is no longer monitored.") {
+                this.jobThread.reply("This Thread is no longer monitored.");
+                monitorThreads.delete(message.thread_id);
             }
-        }
-        break;
-    default:
-        this.jobThread.reply(constants.RequestTermninated);
+            break;
+        case status.Ready:
+            switch (this.jobName) {
+                case constants.CC:
+                    this.jobStatus = status.Ended;
+                    open(constants.CCDocs);
+                    break;
+                case constants.PC:
+                    this.jobStatus = status.Ended;
+                    open(constants.PCDocs);
+                    break;
+                case constants.BC:
+                    this.jobStatus = status.Ended;
+                    open(constants.BCDocs);
+                    break;
+                case constants.Portals:
+                    this.jobStatus = status.Ended;
+                    open(constants.PortalDocs);
+                    break;
+                default:
+                    this.jobStatus = status.Ended;
+                    this.jobThread.reply("Could Not Find Documentation for :".concat(this.jobName));
+                    break;
+
+            }
+            break;
+        case status.JobSuccess:
+            if (this.isReplyFromRequester(message)) {
+                if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "REDIRECT") {
+                    open(this.serverLogsPath);
+                } else if (message.content.toUpperCase().replace(new RegExp('`', 'g'), "") === "END") {
+                    this.jobStatus = status.Ended;
+                    this.jobThread.reply("Transaction Ended.");
+                }
+            }
+            break;
+        default:
+            this.jobThread.reply(constants.RequestTermninated);
 
     }
 };
 
 function startJob(flowdockJob) {
     // stating jenkins job
-    if(flowdockJob.hasBuildParameters){
+    if (flowdockJob.hasBuildParameters) {
         flowdockJob.jenkinsService.jenkins.job.buildWithParams(flowdockJob.jobName, {}, function (err, data) {
-            if(err !== null){
+            if (err !== null) {
                 console.log(data);
                 flowdockJob.jobStatus = status.JobRunning;
                 flowdockJob.jobThread.reply("Job ".concat(flowdockJob.jobName).concat(" Has been Started Please reply \n `Status` to check the latest status of the job"), status.JobRunning);
@@ -426,7 +456,7 @@ function startJob(flowdockJob) {
         })
     } else {
         flowdockJob.jenkinsService.jenkins.job.build(flowdockJob.jobName, function (err, data) {
-            if(data !== null){
+            if (data !== null) {
                 flowdockJob.jobStatus = status.JobRunning;
                 flowdockJob.jobThread.reply("Job ".concat(flowdockJob.jobName).concat(" Has been Started Please reply \n `Status` to check the latest status of the job"), status.JobRunning);
                 flowdockJob.objectionThread.reply("Job ".concat(flowdockJob.jobName).concat(" Has been Started Please reply \n `Status` to check the latest status of the job"), status.JobRunning);

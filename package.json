@@ -6,14 +6,14 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
-    "cookie-parser": "~1.4.3",
-    "debug": "~2.6.9",
-    "express": "~4.16.0",
+    "cookie-parser": "1.4.4",
+    "debug": "4.1.1",
+    "express": "4.17.1",
     "morgan": "~1.9.1",
     "flowdock": "latest",
     "jenkins": "latest",
-    "node-jenkins": "latest",
-    "hashmap": "latest",
+    "node-jenkins": "1.2.5",
+    "hashmap": "2.4.0",
     "lokijs": "latest",
     "opn": "latest",
     "read-last-line": "latest"

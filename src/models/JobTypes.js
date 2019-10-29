@@ -5,3 +5,4 @@ exports.DBRestore = "restore";
 exports.JenkinsJob = "jenkins";
 exports.Logs = "logs";
 exports.Docs = "docs";
+exports.RegressionStatus = "regressionstatus";
